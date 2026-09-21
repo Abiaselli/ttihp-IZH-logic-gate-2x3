@@ -11,7 +11,7 @@ module tb ();
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
 
-  tt_um_abiaselli_izh_bridge_6x4 user_project (
+  tt_um_abiaselli_izh_bridge_3x2 user_project (
       .ui_in(ui_in),
       .uo_out(uo_out),
       .uio_in(uio_in),

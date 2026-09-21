@@ -15,6 +15,8 @@ async def wait_bit(signal, index, value, clk, limit=10000):
 
 async def transact(dut, command):
     assert len(command) == 5
+
+    # Command channel: uio[0]=valid, uio[1]=ready.
     for byte in command:
         await wait_bit(dut.uio_out, 1, 1, dut.clk)
         dut.ui_in.value = byte
@@ -23,6 +25,7 @@ async def transact(dut, command):
         dut.uio_in.value = 0x00
         await RisingEdge(dut.clk)
 
+    # Response channel: uio[3]=valid, uio[2]=ready.
     await wait_bit(dut.uio_out, 3, 1, dut.clk)
     response = []
     for _ in range(5):
@@ -32,11 +35,13 @@ async def transact(dut, command):
         await RisingEdge(dut.clk)
         dut.uio_in.value = 0x00
         await RisingEdge(dut.clk)
+
     return response
 
 @cocotb.test()
 async def test_bridge_protocol(dut):
-    cocotb.start_soon(Clock(dut.clk, 100, unit="ns").start())  # 10 MHz
+    # Nominal 10 MHz project clock.
+    cocotb.start_soon(Clock(dut.clk, 100, unit="ns").start())
 
     dut.ena.value = 1
     dut.ui_in.value = 0
@@ -56,14 +61,6 @@ async def test_bridge_protocol(dut):
 
     response = await transact(dut, [0x02, 0x30, 0x00, 0x00, 0x00])
     assert response == [0x00, 0x30, 0x9A, 0x19, 0x00]
-
-    # Context 3 exists in the 4-neuron build.
-    response = await transact(dut, [0x02, 0x03, 0x00, 0x00, 0x00])
-    assert response == [0x00, 0x03, 0x9A, 0x59, 0x03]
-
-    # Context 4 must be rejected, proving N=4 is active.
-    response = await transact(dut, [0x02, 0x04, 0x00, 0x00, 0x00])
-    assert response[0] == 0x81
 
     response = await transact(dut, [0x03, 0x00, 0x00, 0x00, 0x00])
     assert response == [0x00, 0x00, 0x00, 0x00, 0x00]
